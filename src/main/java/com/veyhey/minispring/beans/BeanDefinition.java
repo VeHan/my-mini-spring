@@ -1,4 +1,4 @@
-package com.veyhey.minispring;
+package com.veyhey.minispring.beans;
 
 public class BeanDefinition {
     private String id;
