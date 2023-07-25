@@ -6,14 +6,12 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class SimpleBeanFactory implements BeanFactory {
-
+public class SimpleBeanFactory extends DefaultSingletonBeanRegistry implements BeanFactory {
     private final Map<String, BeanDefinition> beanDefinitions = new HashMap<>();
-    private final Map<String, Object> singletons = new HashMap<>();
 
     @Override
     public Object getBean(String name) throws BeanException {
-        final var bean = singletons.get(name);
+        final var bean = this.getSingleton(name);
         if (bean != null) {
             return bean;
         }
@@ -25,7 +23,7 @@ public class SimpleBeanFactory implements BeanFactory {
             final Object instance = Class.forName(beanDefinition.getClassName())
                     .getDeclaredConstructor()
                     .newInstance();
-            singletons.put(name, instance);
+            this.registrySingleton(name, instance);
             return instance;
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException | ClassNotFoundException e) {
             throw new BeanException(e.getMessage(), e);
@@ -33,7 +31,18 @@ public class SimpleBeanFactory implements BeanFactory {
     }
 
     @Override
-    public void registerBeanDefinition(BeanDefinition beanDefinition) {
-        beanDefinitions.put(beanDefinition.getId(), beanDefinition);
+    public void registerBean(String name, Object bean) {
+        super.registrySingleton(name, bean);
     }
+
+
+    @Override
+    public boolean containsBean(String name) {
+        return super.containsSingleton(name);
+    }
+
+    public void registerBeanDefinition(BeanDefinition beanDefinition) {
+        this.beanDefinitions.put(beanDefinition.getId(), beanDefinition);
+    }
+
 }

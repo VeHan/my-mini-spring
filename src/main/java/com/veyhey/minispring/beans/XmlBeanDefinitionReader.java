@@ -5,9 +5,9 @@ import org.dom4j.Element;
 
 public class XmlBeanDefinitionReader {
 
-    private final BeanFactory beanFactory;
+    private final SimpleBeanFactory beanFactory;
 
-    public XmlBeanDefinitionReader(BeanFactory beanFactory) {
+    public XmlBeanDefinitionReader(SimpleBeanFactory beanFactory) {
         this.beanFactory = beanFactory;
     }
 

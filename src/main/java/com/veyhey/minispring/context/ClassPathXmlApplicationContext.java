@@ -21,4 +21,12 @@ public class ClassPathXmlApplicationContext {
         return beanFactory.getBean(name);
     }
 
+    public void  registerBean(String name, Object bean){
+        beanFactory.registerBean(name, bean);
+    }
+
+    public boolean containsBean(String name){
+        return beanFactory.containsBean(name);
+    }
+
 }
