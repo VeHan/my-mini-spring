@@ -1,15 +1,20 @@
 package com.veyhey.minispring.beans;
 
 import com.veyhey.minispring.exception.BeanException;
+import com.veyhey.minispring.exception.ConstructorCircularDependencyException;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class SimpleBeanFactory extends DefaultSingletonBeanRegistry implements BeanFactory {
     private final Map<String, BeanDefinition> beanDefinitions = new HashMap<>();
+    private final ConcurrentHashMap<String, Object> earlySingletons = new ConcurrentHashMap<>();
+    private final Set<String> creatingSingletonNames = new HashSet<>();
 
     @Override
     public Object getBean(String name) throws BeanException {
@@ -21,21 +26,14 @@ public class SimpleBeanFactory extends DefaultSingletonBeanRegistry implements B
         if (beanDefinition == null) {
             throw new BeanException(String.format("bean %s not registered", name));
         }
-        try {
-            final Class<?> clazz = Class.forName(beanDefinition.getClassName());
-            final Object instance = clazz
-                    .getDeclaredConstructor(getParamClassList(beanDefinition))
-                    .newInstance(getParamValueList(beanDefinition));
-            injectBySetter(instance, clazz, beanDefinition);
-            this.registrySingleton(name, instance);
-            return instance;
-        } catch (InstantiationException
-                | IllegalAccessException
-                | InvocationTargetException
-                | NoSuchMethodException
-                | ClassNotFoundException e) {
-            throw new BeanException(e.getMessage(), e);
-        }
+        return doCreateBean(name, beanDefinition);
+    }
+
+    private Object doCreateBean(String name, BeanDefinition beanDefinition) throws BeanException {
+        final Object instance = instance(beanDefinition);
+        injectBySetter(instance, beanDefinition);
+        this.registrySingleton(name, instance);
+        return instance;
     }
 
 
@@ -54,16 +52,45 @@ public class SimpleBeanFactory extends DefaultSingletonBeanRegistry implements B
         this.beanDefinitions.put(beanDefinition.getId(), beanDefinition);
     }
 
-    private void injectBySetter(Object instance, Class<?> clazz, BeanDefinition beanDefinition)
-            throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, BeanException {
-        for (ArgumentValue propertyArgValue : beanDefinition.getPropertyArgValues()) {
-            final var propertyName = propertyArgValue.getName();
-            final var setter = clazz.getDeclaredMethod(getSetterName(propertyName), propertyArgValue.getType());
-            final var value = propertyArgValue.getValue() == null ?
-                    this.getBean(propertyArgValue.getRef()) : propertyArgValue.getValue();
-            setter.invoke(instance, value);
+    private Object instance(BeanDefinition beanDefinition) throws BeanException {
+        creatingSingletonNames.add(beanDefinition.getId());
+        try {
+            return beanDefinition.getClazz()
+                    .getDeclaredConstructor(getParamClassList(beanDefinition))
+                    .newInstance(getParamValueList(beanDefinition));
+        }  catch (Exception e) {
+            throw BeanException.wrapper(e);
+        } finally {
+            creatingSingletonNames.remove(beanDefinition.getId());
         }
     }
+
+    private void injectBySetter(Object instance, BeanDefinition beanDefinition)
+            throws BeanException {
+        earlySingletons.put(beanDefinition.getId(), instance);
+        try {
+            Class<?> clazz = beanDefinition.getClazz();
+            for (ArgumentValue propertyArgValue : beanDefinition.getPropertyArgValues()) {
+                final var propertyName = propertyArgValue.getName();
+                final var setter = clazz.getDeclaredMethod(getSetterName(propertyName), propertyArgValue.getType());
+                final Object value;
+                try {
+                    value = getArgValue(propertyArgValue);
+                } catch (ConstructorCircularDependencyException e) {
+                    throw new BeanException(String.format("Constructor Circular Dependency Found: %s -> %s", beanDefinition.getId(),
+                            e.getRef()), e);
+                }
+                setter.invoke(instance, value);
+            }
+        } catch (Exception e) {
+            throw BeanException.wrapper(e);
+        } finally {
+            earlySingletons.remove(beanDefinition.getId());
+        }
+    }
+
+
+
 
     private String getSetterName(String propertyName) {
         final var firstChar = String.valueOf(propertyName.charAt(0));
@@ -74,17 +101,14 @@ public class SimpleBeanFactory extends DefaultSingletonBeanRegistry implements B
     private Object[] getParamValueList(BeanDefinition beanDefinition) throws BeanException {
         List<Object> objects = new ArrayList<>(beanDefinition.getConstructorArgValues().size());
         for (ArgumentValue argumentValue : beanDefinition.getConstructorArgValues()) {
-            if (argumentValue.getValue() != null) {
-                objects.add(argumentValue.getValue());
-                continue;
+            try {
+                objects.add(getArgValue(argumentValue));
+            } catch (ConstructorCircularDependencyException e) {
+                throw new BeanException(String.format("Constructor Circular Dependency Found: %s -> %s", beanDefinition.getId(),
+                        argumentValue.getRef()), e);
             }
-            objects.add(getRefBean(argumentValue.getRef()));
         }
         return objects.toArray();
-    }
-
-    private Object getRefBean(String ref) throws BeanException {
-        return this.getBean(ref);
     }
 
     private Class[] getParamClassList(BeanDefinition beanDefinition) {
@@ -93,5 +117,18 @@ public class SimpleBeanFactory extends DefaultSingletonBeanRegistry implements B
                 .toArray(i -> new Class[beanDefinition.getConstructorArgValues().size()]);
     }
 
+    private Object getArgValue(ArgumentValue propertyArgValue) throws BeanException, ConstructorCircularDependencyException {
+        if (propertyArgValue.getValue() != null) {
+            return propertyArgValue.getValue();
+        }
+        final var ref = propertyArgValue.getRef();
+        if (creatingSingletonNames.contains(ref)) {
+            throw new ConstructorCircularDependencyException(ref);
+        }
+        if (earlySingletons.containsKey(ref)) {
+            return earlySingletons.get(ref);
+        }
+        return this.getBean(ref);
+    }
 
 }

@@ -20,4 +20,28 @@
         <property type="com.veyhey.minispring.service.AService" name="aService" ref="aServiceByConstructor"/>
     </bean>
 
+    <bean id="cService" class="com.veyhey.minispring.service.CService">
+        <property type="com.veyhey.minispring.service.DService" name="dService" ref="dService"/>
+    </bean>
+
+    <bean id="dService" class="com.veyhey.minispring.service.DService">
+        <property type="com.veyhey.minispring.service.CService" name="cService" ref="cService"/>
+    </bean>
+
+    <bean id="cServiceByConstructor" class="com.veyhey.minispring.service.CService">
+        <constructor-arg type="com.veyhey.minispring.service.DService" name="dService" ref="dServiceByConstructor"/>
+    </bean>
+
+    <bean id="dServiceByConstructor" class="com.veyhey.minispring.service.DService">
+        <constructor-arg type="com.veyhey.minispring.service.CService" name="cService" ref="cServiceByConstructor"/>
+    </bean>
+
+    <bean id="cServiceByConstructor2" class="com.veyhey.minispring.service.CService">
+        <constructor-arg type="com.veyhey.minispring.service.DService" name="dService" ref="dServiceBySetter"/>
+    </bean>
+
+    <bean id="dServiceBySetter" class="com.veyhey.minispring.service.DService">
+        <property type="com.veyhey.minispring.service.CService" name="cService" ref="cService"/>
+    </bean>
+
 </beans>

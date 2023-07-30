@@ -4,6 +4,7 @@ import com.veyhey.minispring.context.ClassPathXmlApplicationContext;
 import com.veyhey.minispring.exception.BeanException;
 import com.veyhey.minispring.service.AService;
 import com.veyhey.minispring.service.BService;
+import com.veyhey.minispring.service.CService;
 import com.veyhey.minispring.service.impl.AServiceImpl;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -59,8 +60,15 @@ public class ClassPathXmlApplicationContextTest {
         @Test
         void should_get_cService_circular_dependency_with_dService() throws Exception {
             final var classPathXmlApplicationContext = new ClassPathXmlApplicationContext("beans.xml");
-            final var bService = (BService) classPathXmlApplicationContext.getBean("bServiceInjectBySetterWithOtherBean");
-            Assertions.assertNotNull(bService.getAService());
+            final var cService = (CService) classPathXmlApplicationContext.getBean("cService");
+            Assertions.assertNotNull(cService);
+        }
+
+        @Test
+        void should_throw_exception_when_get_cService_constructor_circular_dependency_with_dService() throws Exception {
+            final var classPathXmlApplicationContext = new ClassPathXmlApplicationContext("beans.xml");
+            final var cService = (CService) classPathXmlApplicationContext.getBean("cServiceByConstructor2");
+            Assertions.assertNotNull(cService);
         }
     }
 

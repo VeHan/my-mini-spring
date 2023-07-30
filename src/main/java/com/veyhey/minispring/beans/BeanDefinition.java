@@ -4,15 +4,15 @@ import java.util.List;
 
 public class BeanDefinition {
     private String id;
-    private String className;
+    private Class<?> clazz;
     private List<ArgumentValue> constructorArgValues;
     private List<ArgumentValue> propertyArgValues;
 
     public BeanDefinition(String id, String className,
                           List<ArgumentValue> constructorArgValues,
-                          List<ArgumentValue> propertyArgValues) {
+                          List<ArgumentValue> propertyArgValues) throws ClassNotFoundException {
         this.id = id;
-        this.className = className;
+        this.clazz = Class.forName(className);
         this.constructorArgValues = constructorArgValues;
         this.propertyArgValues = propertyArgValues;
     }
@@ -21,8 +21,8 @@ public class BeanDefinition {
         return id;
     }
 
-    public String getClassName() {
-        return className;
+    public Class<?> getClazz() {
+        return clazz;
     }
 
     public List<ArgumentValue> getConstructorArgValues() {

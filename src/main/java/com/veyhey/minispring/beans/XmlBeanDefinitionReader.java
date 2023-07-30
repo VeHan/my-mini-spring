@@ -19,14 +19,18 @@ public class XmlBeanDefinitionReader {
         while (xmlResource.hasNext()) {
             Element element = xmlResource.next();
 
-            beanFactory.registerBeanDefinition(
-                    new BeanDefinition(
-                            element.attributeValue("id"),
-                            element.attributeValue("class"),
-                            parseConstructorArgs(element),
-                            parsePropertyArgs(element)
-                    )
-            );
+            try {
+                beanFactory.registerBeanDefinition(
+                        new BeanDefinition(
+                                element.attributeValue("id"),
+                                element.attributeValue("class"),
+                                parseConstructorArgs(element),
+                                parsePropertyArgs(element)
+                        )
+                );
+            } catch (ClassNotFoundException e) {
+                throw new XMLParseException(e);
+            }
         }
     }
 
