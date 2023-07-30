@@ -5,6 +5,7 @@ import com.veyhey.minispring.beans.SimpleBeanFactory;
 import com.veyhey.minispring.beans.XmlBeanDefinitionReader;
 import com.veyhey.minispring.exception.BeanException;
 import com.veyhey.minispring.exception.ResourceInitException;
+import com.veyhey.minispring.exception.XMLParseException;
 
 import java.io.IOException;
 
@@ -12,7 +13,7 @@ public class ClassPathXmlApplicationContext {
 
     private final SimpleBeanFactory beanFactory = new SimpleBeanFactory();
 
-    public ClassPathXmlApplicationContext(String xmlPath) throws IOException, ResourceInitException {
+    public ClassPathXmlApplicationContext(String xmlPath) throws IOException, ResourceInitException, XMLParseException {
         final var resource = new ClassPathXmlResource(xmlPath);
         new XmlBeanDefinitionReader(beanFactory).loadResource(resource);
     }
